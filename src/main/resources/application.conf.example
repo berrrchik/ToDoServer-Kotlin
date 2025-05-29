@@ -1,0 +1,16 @@
+ktor {
+    deployment {
+        port = 8080
+        host = "0.0.0.0"
+    }
+    application {
+        modules = [ ru.todoapp.ApplicationKt.module ]
+    }
+}
+
+database {
+    url = "jdbc:postgresql://localhost:5432/todoapp"
+    driver = "org.postgresql.Driver"
+    user = "your_db_user"
+    password = "your_db_password"
+} 

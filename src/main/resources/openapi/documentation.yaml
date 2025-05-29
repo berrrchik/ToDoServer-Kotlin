@@ -1,0 +1,720 @@
+openapi: 3.0.0
+info:
+  title: TodoApp API
+  version: 1.0.0
+  description: API для Todo приложения
+servers:
+  - url: http://localhost:8080
+    description: Локальный сервер разработки
+paths:
+  /register:
+    post:
+      summary: Регистрация нового пользователя
+      tags:
+        - Авторизация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterReceiveRemote'
+      responses:
+        '200':
+          description: Успешная регистрация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponseRemote'
+        '400':
+          description: Некорректные данные
+        '409':
+          description: Пользователь уже существует
+  
+  /login:
+    post:
+      summary: Вход в систему
+      tags:
+        - Авторизация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginReceiveRemote'
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponseRemote'
+        '400':
+          description: Некорректные данные или неверный пароль
+  
+  /tasks:
+    get:
+      summary: Получение всех задач пользователя
+      tags:
+        - Задачи
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список задач
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponseRemote'
+        '401':
+          description: Не авторизован
+    
+    post:
+      summary: Создание новой задачи
+      tags:
+        - Задачи
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskReceiveRemote'
+      responses:
+        '201':
+          description: Задача создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponseRemote'
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Не авторизован
+          
+    put:
+      summary: Обновление задачи
+      description: |
+        Обновляет задачу, включая изменение статуса выполнения.
+        Для отметки задачи как выполненной, укажите "isCompleted": true
+        Для отметки задачи как невыполненной, укажите "isCompleted": false
+      tags:
+        - Задачи
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateRemote'
+            examples:
+              markAsCompleted:
+                summary: Отметка задачи как выполненной
+                value:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  isCompleted: true
+              markAsIncomplete:
+                summary: Отметка задачи как невыполненной
+                value:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  isCompleted: false
+              fullUpdate:
+                summary: Полное обновление задачи
+                value:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  title: "Новый заголовок"
+                  description: "Новое описание"
+                  isCompleted: true
+                  priority: "ВЫСОКИЙ"
+                  categoryId: "550e8400-e29b-41d4-a716-446655440000"
+                  deadline: "2023-12-31T23:59:59Z"
+      responses:
+        '200':
+          description: Задача успешно обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponseRemote'
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Задача не найдена
+  
+  /tasks/{id}:
+    get:
+      summary: Получение задачи по ID
+      tags:
+        - Задачи
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID задачи
+      responses:
+        '200':
+          description: Задача найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponseRemote'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Задача не найдена
+    
+    delete:
+      summary: Удаление задачи (отметка как удаленной)
+      tags:
+        - Задачи
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID задачи
+      responses:
+        '200':
+          description: Задача успешно удалена
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Задача не найдена
+  
+  /tasks/permanently/{id}:
+    delete:
+      summary: Полное удаление задачи из базы данных
+      tags:
+        - Задачи
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID задачи
+      responses:
+        '200':
+          description: Задача успешно удалена из базы данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Только задачи, помеченные как удаленные, могут быть удалены полностью
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Задача не найдена
+  
+  /categories:
+    get:
+      summary: Получение всех категорий пользователя
+      tags:
+        - Категории
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список категорий
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponseRemote'
+        '401':
+          description: Не авторизован
+    
+    post:
+      summary: Создание новой категории
+      tags:
+        - Категории
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryReceiveRemote'
+      responses:
+        '201':
+          description: Категория создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponseRemote'
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Не авторизован
+          
+    put:
+      summary: Обновление категории
+      tags:
+        - Категории
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdateRemote'
+      responses:
+        '200':
+          description: Категория успешно обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponseRemote'
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Категория не найдена
+  
+  /categories/{id}:
+    get:
+      summary: Получение категории по ID
+      tags:
+        - Категории
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID категории
+      responses:
+        '200':
+          description: Категория найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponseRemote'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Категория не найдена
+          
+    delete:
+      summary: Удаление категории
+      tags:
+        - Категории
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID категории
+      responses:
+        '200':
+          description: Категория успешно удалена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Нельзя удалить стандартную категорию
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Категория не найдена
+  
+  # /categories/delete/{id}:
+  #   post:
+  #     summary: Альтернативный способ удаления категории
+  #     tags:
+  #       - Категории
+  #     security:
+  #       - bearerAuth: []
+  #     parameters:
+  #       - name: id
+  #         in: path
+  #         required: true
+  #         schema:
+  #           type: string
+  #         description: ID категории
+  #     responses:
+  #       '200':
+  #         description: Категория успешно удалена
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/ApiResponse'
+  #       '400':
+  #         description: Нельзя удалить стандартную категорию
+  #       '401':
+  #         description: Не авторизован
+  #       '403':
+  #         description: Доступ запрещен
+  #       '404':
+  #         description: Категория не найдена
+  
+  /categories/hide:
+    post:
+      summary: Скрыть категорию
+      description: Отмечает категорию как скрытую
+      tags:
+        - Категории
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HideCategoryRequest'
+      responses:
+        '200':
+          description: Категория успешно скрыта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Категория не найдена
+  
+  /categories/unhide/{id}:
+    post:
+      summary: Показать ранее скрытую категорию
+      description: Отмечает скрытую категорию как видимую
+      tags:
+        - Категории
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID категории
+      responses:
+        '200':
+          description: Категория успешно отображена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Категория не найдена
+  
+  /categories/hidden:
+    get:
+      summary: Получение всех скрытых категорий
+      tags:
+        - Категории
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список скрытых категорий
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponseRemote'
+        '401':
+          description: Не авторизован
+  
+  # /categories/fix:
+  #   post:
+  #     summary: Ручное исправление категорий
+  #     description: Исправляет дубликаты категорий и другие проблемы
+  #     tags:
+  #       - Категории
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Категории успешно исправлены
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/ApiResponse'
+  #       '401':
+  #         description: Не авторизован
+  
+  # /categories/sync-hidden:
+  #   post:
+  #     summary: Синхронизация флагов скрытых категорий
+  #     description: Синхронизирует флаги isHidden категорий с таблицей скрытых категорий
+  #     tags:
+  #       - Категории
+  #     security:
+  #       - bearerAuth: []
+  #     responses:
+  #       '200':
+  #         description: Скрытые категории синхронизированы
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/ApiResponse'
+  #       '401':
+  #         description: Не авторизован
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    RegisterReceiveRemote:
+      type: object
+      properties:
+        login:
+          type: string
+          example: "user123"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          example: "password123"
+      required:
+        - login
+        - email
+        - password
+    
+    RegisterResponseRemote:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    
+    LoginReceiveRemote:
+      type: object
+      properties:
+        login:
+          type: string
+          example: "user123"
+        password:
+          type: string
+          example: "password123"
+      required:
+        - login
+        - password
+    
+    LoginResponseRemote:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    
+    TaskReceiveRemote:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Сделать покупки"
+        description:
+          type: string
+          example: "Купить молоко, хлеб и яйца"
+        priority:
+          type: string
+          enum: [НИЗКИЙ, СРЕДНИЙ, ВЫСОКИЙ]
+          example: "СРЕДНИЙ"
+        categoryId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        deadline:
+          type: string
+          format: date-time
+          example: "2023-12-31T23:59:59Z"
+      required:
+        - title
+        - description
+        - priority
+        - categoryId
+    
+    TaskResponseRemote:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          example: "Сделать покупки"
+        description:
+          type: string
+          example: "Купить молоко, хлеб и яйца"
+        isCompleted:
+          type: boolean
+          example: false
+        isDeleted:
+          type: boolean
+          example: false
+        priority:
+          type: string
+          enum: [НИЗКИЙ, СРЕДНИЙ, ВЫСОКИЙ]
+          example: "СРЕДНИЙ"
+        categoryId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        deadline:
+          type: string
+          format: date-time
+          example: "2023-12-31T23:59:59Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-05-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2023-05-15T10:30:00Z"
+    
+    TaskListResponseRemote:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskResponseRemote'
+    
+    TaskUpdateRemote:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          example: "Сделать покупки"
+        description:
+          type: string
+          example: "Купить молоко, хлеб и яйца"
+        isCompleted:
+          type: boolean
+          example: true
+        isDeleted:
+          type: boolean
+          example: false
+        priority:
+          type: string
+          enum: [НИЗКИЙ, СРЕДНИЙ, ВЫСОКИЙ]
+          example: "ВЫСОКИЙ"
+        categoryId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        deadline:
+          type: string
+          format: date-time
+          example: "2023-12-31T23:59:59Z"
+      required:
+        - id
+    
+    CategoryReceiveRemote:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Работа"
+        isDefault:
+          type: boolean
+          example: false
+      required:
+        - name
+    
+    CategoryResponseRemote:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "Работа"
+        isDefault:
+          type: boolean
+          example: false
+        isHidden:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-05-15T10:30:00Z"
+    
+    CategoryListResponseRemote:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryResponseRemote'
+    
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Операция выполнена успешно"
+    
+    HideCategoryRequest:
+      type: object
+      properties:
+        categoryId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      required:
+        - categoryId
+    
+    CategoryUpdateRemote:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "Новое название"
+        isHidden:
+          type: boolean
+          example: false
+        isDefault:
+          type: boolean
+          example: false
+      required:
+        - id 
